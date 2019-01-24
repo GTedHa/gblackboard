@@ -1,6 +1,8 @@
 Welcome to gblackboard's documentation!
 ======================================
 
+Repository: `GitHub <https://github.com/GTedHa/gblackboard>`_
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
