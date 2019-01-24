@@ -16,8 +16,8 @@ class SupportedMemoryType(enum.Enum):
     Supported memory type.
     """
 
-    DICTIONARY = enum.auto()
-    REDIS = enum.auto()
+    DICTIONARY = 0
+    REDIS = 1
 
     @classmethod
     def has_value(cls, value):
