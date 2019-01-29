@@ -27,7 +27,7 @@ setup(
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: BSD License',
+        'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
@@ -41,7 +41,7 @@ setup(
         ],
     },
     install_requires=requirements,
-    license="BSD license",
+    license="MIT license",
     long_description=readme + '\n\n' + history,
     include_package_data=True,
     keywords='gblackboard',

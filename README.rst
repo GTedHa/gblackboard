@@ -19,7 +19,7 @@ gblackboard
 Blackboard pattern implementation
 
 
-* Free software: BSD license
+* Free software: MIT license
 * Documentation: https://gblackboard.readthedocs.io.
 
 
