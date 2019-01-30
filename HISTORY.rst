@@ -6,3 +6,9 @@ History
 ------------------
 
 * First commit on GitHub.
+
+
+0.1.1 (2019-01-30)
+------------------
+
+* Add fakeredis for test

@@ -1,13 +1,16 @@
 Welcome to gblackboard's documentation!
 ======================================
 
-Repository: `GitHub <https://github.com/GTedHa/gblackboard>`_
+.. include:: ../README.rst
+
+
+Contents:
+---------
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 3
+   :caption: GBlackboard
 
-   readme
    installation
    usage
    modules
@@ -16,7 +19,7 @@ Repository: `GitHub <https://github.com/GTedHa/gblackboard>`_
    history
 
 Indices and tables
-==================
+------------------
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
