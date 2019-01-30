@@ -5,13 +5,13 @@
 
 import datetime as dt
 import unittest
-from click.testing import CliRunner
+
 from marshmallow import Schema, fields, post_load
 
+from gblackboard import wrapper
 from gblackboard import exception
 from gblackboard import Blackboard
 from gblackboard import SupportedMemoryType
-from gblackboard import cli
 
 
 class User(object):
@@ -43,10 +43,9 @@ class UserSchema(Schema):
 
 
 class TestGblackboard(unittest.TestCase):
-    """Tests for `gblackboard` package."""
 
     def setUp(self):
-        # self.blackboard = Blackboard(SupportedMemoryType.DICTIONARY)
+        wrapper.DEV_MODE = True
         self.blackboard = Blackboard(
             SupportedMemoryType.REDIS,
             host='localhost',
@@ -64,15 +63,12 @@ class TestGblackboard(unittest.TestCase):
         self.blackboard.close()
 
     def callback_a(self, data):
-        print('callback_a: ' + str(data))
         self.data_a = data
 
     def callback_b(self, data):
-        print('callback_b: ' + str(data))
         self.data_b = data
 
     def callback_c(self, data):
-        print('callback_c: ' + str(data))
         self.data_c = data
 
     def test_simple_data(self):
@@ -164,19 +160,8 @@ class TestGblackboard(unittest.TestCase):
         user_list_val = [user1_val, user2_val]
         self.blackboard.set(user_list_key, user_list_val, scheme_cls=UserSchema)
         user_list_val = self.blackboard.get(user_list_key)
-        print(user_list_val)
         self.assertEqual(user_list_val[0], user1_val)
         self.assertListEqual(user_list_val, [user1_val, user2_val])
-
-    # def test_command_line_interface(self):
-    #     """Test the CLI."""
-    #     runner = CliRunner()
-    #     result = runner.invoke(cli.main)
-    #     assert result.exit_code == 0
-    #     assert 'gblackboard.cli.main' in result.output
-    #     help_result = runner.invoke(cli.main, ['--help'])
-    #     assert help_result.exit_code == 0
-    #     assert '--help  Show this message and exit.' in help_result.output
 
 
 if __name__ == '__main__':
