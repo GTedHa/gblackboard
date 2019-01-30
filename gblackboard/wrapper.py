@@ -10,6 +10,9 @@ from .data import Data
 from .exception import *
 
 
+DEV_MODE = False
+
+
 class SupportedMemoryType(enum.Enum):
 
     """
@@ -201,9 +204,13 @@ class RedisWrapper(MemoryWrapper):
         return super(RedisWrapper, self).setup()
 
     def _set_memory(self):
-        self._mem = redis.Redis(
-            host=self._host, port=self._port, db=self._db_num,
-            socket_timeout=self._timeout, **self._config)
+        if DEV_MODE:
+            import fakeredis
+            self._mem = fakeredis.FakeStrictRedis()
+        else:
+            self._mem = redis.Redis(
+                host=self._host, port=self._port, db=self._db_num,
+                socket_timeout=self._timeout, **self._config)
         self._validate_config()
         connected = self.connected()
         if not connected:

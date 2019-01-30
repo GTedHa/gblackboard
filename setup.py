@@ -14,6 +14,7 @@ with open('HISTORY.rst') as history_file:
 requirements = [
     'Click>=6.0',
     'redis>=3.0.0',
+    'fakeredis>=1.0',
     'marshmallow==2.18.0',
 ]
 

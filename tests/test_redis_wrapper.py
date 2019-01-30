@@ -4,6 +4,7 @@
 
 import unittest
 
+from gblackboard import wrapper
 from gblackboard.wrapper import RedisWrapper
 
 
@@ -11,6 +12,7 @@ class TestRedisWrapper(unittest.TestCase):
     """Tests for `gblackboard` package."""
 
     def setUp(self):
+        wrapper.DEV_MODE = True
         self.redis_wrapper = RedisWrapper(host='localhost', flush=False)
         self.ready = self.redis_wrapper.setup()
 
