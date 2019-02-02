@@ -4,6 +4,7 @@
 """Tests for `gblackboard` package."""
 
 import datetime as dt
+import json
 import unittest
 
 from marshmallow import Schema, fields, post_load
@@ -70,14 +71,14 @@ class TestGblackboard(unittest.TestCase):
         first = self.blackboard.get(first_key)
         first_json = self.blackboard.get(first_key, json=True)
         self.assertEqual(first, first_value)
-        self.assertEqual(first_json, "{\"list\": false, \"type\": 1, \"value\": 100}")
+        self.assertEqual(json.loads(first_json, encoding='utf-8')['value'], first_value)
         # update first value
         first_value = 200
         self.blackboard.update(first_key, first_value)
         first = self.blackboard.get(first_key)
         first_json = self.blackboard.get(first_key, json=True)
         self.assertEqual(first, first_value)
-        self.assertEqual(first_json, "{\"list\": false, \"type\": 1, \"value\": 200}")
+        self.assertEqual(json.loads(first_json, encoding='utf-8')['value'], first_value)
         # set second value (read_only)
         second_key = 'second'
         second_value = 100.1
@@ -85,7 +86,7 @@ class TestGblackboard(unittest.TestCase):
         second = self.blackboard.get(second_key)
         second_json = self.blackboard.get(second_key, json=True)
         self.assertEqual(second, second_value)
-        self.assertEqual(second_json, "{\"list\": false, \"type\": 2, \"value\": 100.1}")
+        self.assertEqual(json.loads(second_json, encoding='utf-8')['value'], second_value)
         second_value = 100.2
         with self.assertRaises(exception.NotEditable):
             self.blackboard.update(second_key, second_value)
