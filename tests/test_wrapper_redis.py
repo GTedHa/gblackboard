@@ -87,18 +87,6 @@ class TestRedisWrapper(unittest.TestCase):
             test_data = self.redis_wrapper.get(_test_dict_list_data_key)
             self.assertListEqual(test_data, _test_dict_list_data_val)
 
-    def test_get_json(self):
-        if self.ready:
-            _test_dict_list_data_key = 'dict_list_data_key'
-            _test_dict_list_data_val = [
-                dict(a=1, b=0.5, c='hello world!'),
-                dict(a=2, b=3.0, c='hello blackboard'),
-                dict(a=100, b=45.4, c='i\'m monster')
-            ]
-            self.redis_wrapper.set(_test_dict_list_data_key, _test_dict_list_data_val)
-            test_data = self.redis_wrapper.get_json_str(_test_dict_list_data_key)
-            self.assertEqual(type(test_data), str)
-
 
 if __name__ == '__main__':
     unittest.main()
