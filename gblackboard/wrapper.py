@@ -2,11 +2,10 @@
 
 import abc
 import enum
-import json
 import redis
-import socket
+# import socket
 
-from .data import Data
+from .data import reconstruct, load
 from .exception import *
 
 
@@ -59,10 +58,6 @@ class MemoryWrapper(object):
         return True
 
     @abc.abstractmethod
-    def get_json_str(self, key):
-        return ""
-
-    @abc.abstractmethod
     def get(self, key):
         return None
 
@@ -79,17 +74,12 @@ class MemoryWrapper(object):
         return True
 
     @staticmethod
-    def transform_value_to_json(value):
-        data = Data(value)
-        data_json = json.dumps(data.r_data)
-        return data_json
+    def transform_value_to_pickle(value):
+        return reconstruct(value)
 
     @staticmethod
-    def transform_json_to_value(data_json):
-        data_dict = json.loads(data_json)
-        data = Data()
-        data.load(data_dict)
-        return data.value
+    def transform_pickle_to_value(data):
+        return load(data)
 
 
 class Dictionary(object):
@@ -140,17 +130,14 @@ class DictionaryWrapper(MemoryWrapper):
         self._mem = None
 
     def set(self, key, value):
-        data = MemoryWrapper.transform_value_to_json(value)
+        data = MemoryWrapper.transform_value_to_pickle(value)
         self._mem.set(key, data)
         return True
 
-    def get_json_str(self, key):
-        return self._mem.get(key)
-
     def get(self, key):
-        data = self.get_json_str(key)
+        data = self._mem.get(key)
         if data:
-            value = MemoryWrapper.transform_json_to_value(data)
+            value = MemoryWrapper.transform_pickle_to_value(data)
         else:
             value = None
         return value
@@ -245,7 +232,7 @@ class RedisWrapper(MemoryWrapper):
 
     def set(self, key, value):
         if self._mem_ready:
-            data = MemoryWrapper.transform_value_to_json(value)
+            data = MemoryWrapper.transform_value_to_pickle(value)
             try:
                 success = self._mem.set(key, data)
             except redis.ConnectionError:
@@ -254,20 +241,14 @@ class RedisWrapper(MemoryWrapper):
             raise RedisNotConnected
         return success
 
-    def get_json_str(self, key):
-        try:
-            data = self._mem.get(key)
-            if data:
-                data = data.decode('utf-8')
-        except redis.ConnectionError:
-            raise RedisNotConnected
-        return data
-
     def get(self, key):
         if self._mem_ready:
-            data = self.get_json_str(key)
+            try:
+                data = self._mem.get(key)
+            except redis.ConnectionError:
+                raise RedisNotConnected
             if data:
-                value = MemoryWrapper.transform_json_to_value(data)
+                value = MemoryWrapper.transform_pickle_to_value(data)
             else:
                 value = None
         else:
