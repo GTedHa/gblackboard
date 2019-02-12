@@ -14,8 +14,7 @@ from .exception import (
 
 class MetaInfo(object):
 
-    def __init__(self, scheme_cls=None, read_only=False):
-        self.scheme_cls = scheme_cls
+    def __init__(self, read_only=False):
         self.read_only = read_only
         self._callbacks = []
 
@@ -111,7 +110,6 @@ class Blackboard(object):
                 timeout=self._config['timeout'],
                 **kwargs
             )
-
         self._meta_info = {}
 
     def setup(self):
@@ -121,40 +119,23 @@ class Blackboard(object):
         del self._meta_info
         self._memory_wrapper.close()
 
-    def set(self, key, value, scheme_cls=None, read_only=False):
+    def set(self, key, value, read_only=False):
         if type(key) is not str:
             raise KeyNotString("Blackboard data `key` should be `str` type.")
         if key in self._meta_info:
             raise ExistingKey("Given `key` already exists in blackboard")
-        meta_info = MetaInfo(scheme_cls=scheme_cls, read_only=read_only)
-        if scheme_cls:
-            if type(value) is list:
-                scheme = scheme_cls(strict=True, many=True)
-            else:
-                scheme = scheme_cls(strict=True)
-            value = scheme.dump(value).data  # dump to dictionary
         try:
             success = self._memory_wrapper.set(key, value)
         except Exception:
             raise
         if success:
-            self._meta_info[key] = meta_info
+            self._meta_info[key] = MetaInfo(read_only=read_only)
         return success
 
-    def get(self, key, json=False):
+    def get(self, key):
         if key not in self._meta_info:
             raise NonExistingKey
-        meta_info = self._meta_info[key]
-        if not json:
-            value = self._memory_wrapper.get(key)
-            if meta_info.scheme_cls:
-                if type(value) is list:
-                    scheme = meta_info.scheme_cls(strict=True, many=True)
-                else:
-                    scheme = meta_info.scheme_cls(strict=True)
-                value = scheme.load(value).data
-        else:
-            value = self._memory_wrapper.get_json_str(key)
+        value = self._memory_wrapper.get(key)
         return value
 
     def update(self, key, value):
@@ -163,13 +144,8 @@ class Blackboard(object):
         meta_info = self._meta_info[key]
         if meta_info.read_only:
             raise NotEditable("Cannot update read-only data")
-        if meta_info.scheme_cls:
-            scheme = meta_info.scheme_cls(strict=True)
-            _value = scheme.dump(value).data  # dump to dictionary
-        else:
-            _value = value
         try:
-            success = self._memory_wrapper.set(key, _value)
+            success = self._memory_wrapper.set(key, value)
         except Exception:
             raise
         if success:
