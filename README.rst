@@ -38,6 +38,8 @@ To use gblackboard in a project:
 
 - basic usage::
 
+.. code-block:: python
+
     from gblackboard import Blackboard
     from gblackboard import SupportedMemoryType
 
@@ -46,7 +48,6 @@ To use gblackboard in a project:
     blackboard.setup()
     # set a key-value data; `set` method should be called only once for a key.
     # it's a kind of initialization.
-    # supported data-type: int, int[], float, float[], str, str[], dict, dict[]
     blackboard.set('key', 'value')
     # retrieve data with key
     value = blackboard.get('key')
@@ -58,7 +59,10 @@ To use gblackboard in a project:
     # clear all data in blackboard
     blackboard.clear()
 
+
 - observer::
+
+.. code-block:: python
 
     from gblackboard import Blackboard
     from gblackboard import SupportedMemoryType
@@ -75,12 +79,14 @@ To use gblackboard in a project:
     # and `new_value` will passed to `callback` function.
     blackboard.update('key', 'new_value')
 
+
 - complex data::
+
+.. code-block:: python
 
     from gblackboard import Blackboard
     from gblackboard import SupportedMemoryType
 
-    from marshmallow import Schema, fields, post_load
     import datetime as dt
 
     class User(object):
@@ -93,24 +99,11 @@ To use gblackboard in a project:
         def __repr__(self):
             return '<User(name={self.name!r})>'.format(self=self)
 
-    class UserSchema(Schema):
-
-        name = fields.Str()
-        email = fields.Email()
-        created_at = fields.DateTime()
-
-        @post_load
-        def make_user(self, data):
-            return User(data['name'], data['email'])
-
     blackboard = Blackboard(SupportedMemoryType.DICTIONARY)
     blackboard.setup()
 
-    # with marshmallow Scheme, you can also handle complex python objects.
-    blackboard.set('user',
-        User("G.Ted", "gted221@gmail.com"),
-        scheme_cls=UserScheme
-    )
+    # You can also store customized class object in blackboard
+    blackboard.set('user', User("G.Ted", "gted221@gmail.com"))
     user = blackboard.get('user')
     print(user)
     # <User(name='G.Ted')> will be printed
@@ -120,8 +113,7 @@ To use gblackboard in a project:
         [
             User("User1", "user1@gblackboard.com"),
             User("User2", "user2@gblackboard.com"),
-        ],
-        scheme_cls=UserScheme
+        ]
     )
     users = blackboard.get('users')
     print(users)
@@ -132,7 +124,7 @@ TODO
 -------
 
 * Export blackboard in JSON format
-* Save blackboard contents
+* Save & load blackboard contents
 * Validation for Redis configurations
 * Print blackboard contents for debugging
 
