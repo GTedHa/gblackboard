@@ -4,7 +4,6 @@
 """Tests for `gblackboard` package."""
 
 import datetime as dt
-import json
 import unittest
 
 from gblackboard import wrapper
@@ -39,7 +38,7 @@ class TestGblackboard(unittest.TestCase):
             host='localhost',
             port=6379,
             db_num=1,
-            flush=False,
+            flush=True,
             timeout=1.0
         )
         self.blackboard.setup()

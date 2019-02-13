@@ -13,7 +13,7 @@ class TestRedisWrapper(unittest.TestCase):
 
     def setUp(self):
         wrapper.DEV_MODE = True
-        self.redis_wrapper = RedisWrapper(host='localhost', flush=False)
+        self.redis_wrapper = RedisWrapper(host='localhost', flush=True)
         self.ready = self.redis_wrapper.setup()
 
     def tearDown(self):
