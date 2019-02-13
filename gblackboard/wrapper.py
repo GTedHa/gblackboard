@@ -10,6 +10,7 @@ from .exception import *
 
 
 DEV_MODE = False
+GBLACKBOARD = 'gblackboard'
 
 
 class SupportedMemoryType(enum.Enum):
@@ -227,24 +228,28 @@ class RedisWrapper(MemoryWrapper):
             return True
 
     def close(self):
-        if self.connected() and self._flush:
-            self._mem.flushdb()
+        if self._flush:
+            try:
+                keys = self._mem.hkeys(GBLACKBOARD)
+                self._mem.hdel(GBLACKBOARD, *keys)
+            except redis.ConnectionError:
+                raise RedisNotConnected
 
     def set(self, key, value):
         if self._mem_ready:
             data = MemoryWrapper.transform_value_to_pickle(value)
             try:
-                success = self._mem.set(key, data)
+                self._mem.hset(GBLACKBOARD, key, data)
             except redis.ConnectionError:
                 raise RedisNotConnected
         else:
             raise RedisNotConnected
-        return success
+        return True
 
     def get(self, key):
         if self._mem_ready:
             try:
-                data = self._mem.get(key)
+                data = self._mem.hget(GBLACKBOARD, key)
             except redis.ConnectionError:
                 raise RedisNotConnected
             if data:
@@ -258,7 +263,7 @@ class RedisWrapper(MemoryWrapper):
     def delete(self, key):
         if self._mem_ready:
             try:
-                result = self._mem.delete(key)
+                result = self._mem.hdel(GBLACKBOARD, key)
             except redis.ConnectionError:
                 raise RedisNotConnected
             if result > 0:
@@ -272,7 +277,7 @@ class RedisWrapper(MemoryWrapper):
     def has(self, key):
         if self._mem_ready:
             try:
-                result = self._mem.exists(key)
+                result = self._mem.hexists(GBLACKBOARD, key)
             except redis.ConnectionError:
                 raise RedisNotConnected
             if result > 0:
