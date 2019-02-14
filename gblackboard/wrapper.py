@@ -151,6 +151,16 @@ class DictionaryWrapper(MemoryWrapper):
         return True
 
 
+def raise_conn_error(func):
+    def wrapper(*args, **kwargs):
+        try:
+            result = func(*args, **kwargs)
+        except redis.ConnectionError:
+            raise RedisNotConnected
+        return result
+    return wrapper
+
+
 class RedisWrapper(MemoryWrapper):
 
     """
@@ -213,63 +223,41 @@ class RedisWrapper(MemoryWrapper):
         else:
             return True
 
+    @raise_conn_error
     def close(self):
         if self._flush:
-            try:
-                keys = self._mem.hkeys(GBLACKBOARD)
-                self._mem.hdel(GBLACKBOARD, *keys)
-            except redis.ConnectionError:
-                raise RedisNotConnected
+            self._flush_hash()
 
+    @raise_conn_error
     def set(self, key, value):
-        if self._mem_ready:
-            data = MemoryWrapper.transform_value_to_pickle(value)
-            try:
-                self._mem.hset(GBLACKBOARD, key, data)
-            except redis.ConnectionError:
-                raise RedisNotConnected
-        else:
-            raise RedisNotConnected
+        data = MemoryWrapper.transform_value_to_pickle(value)
+        try:
+            self._mem.hset(GBLACKBOARD, key, data)
+        except redis.exceptions.DataError:
+            return False
         return True
 
+    @raise_conn_error
     def get(self, key):
-        if self._mem_ready:
-            try:
-                data = self._mem.hget(GBLACKBOARD, key)
-            except redis.ConnectionError:
-                raise RedisNotConnected
-            if data:
-                value = MemoryWrapper.transform_pickle_to_value(data)
-            else:
-                value = None
+        data = self._mem.hget(GBLACKBOARD, key)
+        if data:
+            return MemoryWrapper.transform_pickle_to_value(data)
         else:
-            raise RedisNotConnected
-        return value
+            return None
 
+    @raise_conn_error
     def delete(self, key):
-        if self._mem_ready:
-            try:
-                result = self._mem.hdel(GBLACKBOARD, key)
-            except redis.ConnectionError:
-                raise RedisNotConnected
-            if result > 0:
-                success = True
-            else:
-                success = False
+        result = self._mem.hdel(GBLACKBOARD, key)
+        if result > 0:
+            return True
         else:
-            raise RedisNotConnected
-        return success
+            return False
 
+    @raise_conn_error
     def has(self, key):
-        if self._mem_ready:
-            try:
-                result = self._mem.hexists(GBLACKBOARD, key)
-            except redis.ConnectionError:
-                raise RedisNotConnected
-            if result > 0:
-                existing = True
-            else:
-                existing = False
+        result = self._mem.hexists(GBLACKBOARD, key)
+        if result > 0:
+            return True
         else:
             raise RedisNotConnected
         return existing
