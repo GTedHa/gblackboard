@@ -37,18 +37,11 @@ class MemoryWrapper(object):
         self._mem = None
         self._mem_ready = False
         self._config = kwargs
-
-    def setup(self):
-        self._mem_ready = self._set_memory()
-        return self._mem_ready
-
-    @property
-    def mem_ready(self):
-        return self._mem_ready
+        self.setup()
 
     @abc.abstractmethod
-    def _set_memory(self):
-        return True
+    def setup(self):
+        pass
 
     @abc.abstractmethod
     def close(self):
@@ -189,9 +182,6 @@ class RedisWrapper(MemoryWrapper):
         self._timeout = timeout
 
     def setup(self):
-        return super(RedisWrapper, self).setup()
-
-    def _set_memory(self):
         if DEV_MODE:
             import fakeredis
             self._mem = fakeredis.FakeStrictRedis()
@@ -200,10 +190,6 @@ class RedisWrapper(MemoryWrapper):
                 host=self._host, port=self._port, db=self._db_num,
                 socket_timeout=self._timeout, **self._config)
         self._validate_config()
-        connected = self.connected()
-        if not connected:
-            self._mem = None
-        return connected
 
     def _validate_config(self):
         # TODO: check that followings have valid values

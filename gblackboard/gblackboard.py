@@ -112,9 +112,6 @@ class Blackboard(object):
             )
         self._meta_info = {}
 
-    def setup(self):
-        return self._memory_wrapper.setup()
-
     def close(self):
         del self._meta_info
         self._memory_wrapper.close()
