@@ -41,7 +41,6 @@ class TestGblackboard(unittest.TestCase):
             flush=True,
             timeout=1.0
         )
-        self.blackboard.setup()
         self.data_a = None
         self.data_b = None
         self.data_c = None
