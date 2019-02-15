@@ -35,7 +35,6 @@ class MemoryWrapper(object):
 
     def __init__(self, **kwargs):
         self._mem = None
-        self._mem_ready = False
         self._config = kwargs
         self.setup()
 
@@ -114,11 +113,7 @@ class DictionaryWrapper(MemoryWrapper):
     """
 
     def setup(self):
-        return super(DictionaryWrapper, self).setup()
-
-    def _set_memory(self):
         self._mem = Dictionary()
-        return True
 
     def close(self):
         self._mem = None
@@ -184,12 +179,12 @@ class RedisWrapper(MemoryWrapper):
     """
 
     def __init__(self, host='localhost', port=6379, db_num=0, flush=True, timeout=1.0, **kwargs):
-        super(RedisWrapper, self).__init__(**kwargs)
         self._host = host
         self._port = port
         self._db_num = db_num
         self._flush = flush
         self._timeout = timeout
+        super(RedisWrapper, self).__init__(**kwargs)
 
     def setup(self):
         if DEV_MODE:
