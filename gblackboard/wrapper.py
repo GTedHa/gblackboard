@@ -2,6 +2,7 @@
 
 import abc
 import enum
+import pickle
 import redis
 # import socket
 
@@ -63,7 +64,21 @@ class MemoryWrapper(object):
         return None
 
     @abc.abstractmethod
-    def save(self):
+    def _get_all(self):
+        """
+        :return: Whole (serialized) data in blackboard
+        :rtype: dict
+        """
+        return dict()
+
+    @abc.abstractmethod
+    def _restore(self, kv_pairs):
+        """
+        :param kv_pairs: (serialized) key-value pairs
+        :type: dict
+        :return: True if succeed to store kv_pairs to memory else False
+        :rtype: bool
+        """
         return True
 
     @staticmethod
@@ -73,6 +88,20 @@ class MemoryWrapper(object):
     @staticmethod
     def transform_pickle_to_value(data):
         return load(data)
+
+    def save(self, file_path):
+        whole_data = self._get_all()
+        with open(file_path, 'wb') as outfile:
+            pickle.dump(whole_data, outfile, protocol=pickle.HIGHEST_PROTOCOL)
+        return True
+
+    def load(self, file_path):
+        with open(file_path, 'rb') as infile:
+            read_data = pickle.load(infile)
+        if type(read_data) is not dict:
+            raise ReadWrongFile("File contents must be dictionary data: {}".format(read_data))
+        self._restore(read_data)
+        return True
 
 
 class Dictionary(object):
@@ -105,6 +134,13 @@ class Dictionary(object):
     def exists(self, key):
         return key in self._dict
 
+    def flush(self):
+        self._dict.clear()
+
+    @property
+    def all(self):
+        return self._dict
+
 
 class DictionaryWrapper(MemoryWrapper):
 
@@ -116,7 +152,7 @@ class DictionaryWrapper(MemoryWrapper):
         self._mem = Dictionary()
 
     def close(self):
-        self._mem = None
+        self._mem.flush()
 
     def set(self, key, value):
         data = MemoryWrapper.transform_value_to_pickle(value)
@@ -141,8 +177,25 @@ class DictionaryWrapper(MemoryWrapper):
     def has(self, key):
         return self._mem.exists(key)
 
-    def save(self):
-        # TODO: save dictionary contents as a json file.
+    def _get_all(self):
+        """
+        :return: Whole (serialized) data in blackboard
+        :rtype: dict
+        """
+        return self._mem.all
+
+    def _restore(self, kv_pairs):
+        """
+        :param kv_pairs: (serialized) key-value pairs
+        :type: dict
+        :return: True if succeed to store kv_pairs to memory else False
+        :rtype: bool
+        """
+        self._mem.flush()
+        for key, val in kv_pairs.items():
+            if type(key) is bytes:
+                key = key.decode("utf-8")
+            self._mem.set(key, val)
         return True
 
 
@@ -218,6 +271,11 @@ class RedisWrapper(MemoryWrapper):
         else:
             return True
 
+    def _flush_hash(self):
+        keys = self._mem.hkeys(GBLACKBOARD)
+        if keys:
+            self._mem.hdel(GBLACKBOARD, *keys)
+
     @raise_conn_error
     def close(self):
         if self._flush:
@@ -254,9 +312,26 @@ class RedisWrapper(MemoryWrapper):
         if result > 0:
             return True
         else:
-            raise RedisNotConnected
-        return existing
+            return False
 
-    def save(self):
-        # TODO: call redis.save()
+    @raise_conn_error
+    def _get_all(self):
+        """
+        :return: Whole (serialized) data in blackboard
+        :rtype: dict
+        """
+        return self._mem.hgetall(GBLACKBOARD)
+
+    @raise_conn_error
+    def _restore(self, kv_pairs):
+        """
+        :param kv_pairs: (serialized) key-value pairs
+        :type: dict
+        :return: True if succeed to store kv_pairs to memory else False
+        :rtype: bool
+        """
+        self._flush_hash()
+        for key, val in kv_pairs.items():
+            self._mem.hset(GBLACKBOARD, key, val)
         return True
+

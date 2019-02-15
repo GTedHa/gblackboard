@@ -55,3 +55,13 @@ class RedisWrongConfig(RedisException):
 
 class RedisNotConnected(RedisException):
     pass
+
+
+# about save & load file
+
+class FileIOException(BlackboardException):
+    pass
+
+
+class ReadWrongFile(FileIOException):
+    pass
