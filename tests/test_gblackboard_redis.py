@@ -4,10 +4,7 @@
 """Tests for `gblackboard` package."""
 
 import datetime as dt
-import json
 import unittest
-
-from marshmallow import Schema, fields, post_load
 
 from gblackboard import wrapper
 from gblackboard import exception
@@ -32,17 +29,6 @@ class User(object):
             return False
 
 
-class UserSchema(Schema):
-
-    name = fields.Str()
-    email = fields.Email()
-    created_at = fields.DateTime()
-
-    @post_load
-    def make_user(self, data):
-        return User(data['name'], data['email'])
-
-
 class TestGblackboard(unittest.TestCase):
 
     def setUp(self):
@@ -52,10 +38,9 @@ class TestGblackboard(unittest.TestCase):
             host='localhost',
             port=6379,
             db_num=1,
-            flush=False,
+            flush=True,
             timeout=1.0
         )
-        self.blackboard.setup()
         self.data_a = None
         self.data_b = None
         self.data_c = None
@@ -78,24 +63,18 @@ class TestGblackboard(unittest.TestCase):
         first_value = 100
         self.blackboard.set(first_key, first_value)
         first = self.blackboard.get(first_key)
-        first_json = self.blackboard.get(first_key, json=True)
         self.assertEqual(first, first_value)
-        self.assertEqual(json.loads(first_json, encoding='utf-8')['value'], first_value)
         # update first value
         first_value = 200
         self.blackboard.update(first_key, first_value)
         first = self.blackboard.get(first_key)
-        first_json = self.blackboard.get(first_key, json=True)
         self.assertEqual(first, first_value)
-        self.assertEqual(json.loads(first_json, encoding='utf-8')['value'], first_value)
         # set second value (read_only)
         second_key = 'second'
         second_value = 100.1
         self.blackboard.set(second_key, second_value, read_only=True)
         second = self.blackboard.get(second_key)
-        second_json = self.blackboard.get(second_key, json=True)
         self.assertEqual(second, second_value)
-        self.assertEqual(json.loads(second_json, encoding='utf-8')['value'], second_value)
         second_value = 100.2
         with self.assertRaises(exception.NotEditable):
             self.blackboard.update(second_key, second_value)
@@ -139,14 +118,14 @@ class TestGblackboard(unittest.TestCase):
         # user1 data
         user1_key = 'user1'
         user1_val = User("G.Ted", "gted221@gmail.com")
-        self.blackboard.set(user1_key, user1_val, scheme_cls=UserSchema)
+        self.blackboard.set(user1_key, user1_val)
         user1_val = self.blackboard.get(user1_key)
         self.assertEqual(type(user1_val), User)
         self.assertEqual(repr(user1_val), "<User(name='G.Ted')>")
         # user2 data
         user2_key = 'user2'
         user2_val = User("Foo", "foo@bar.com")
-        self.blackboard.set(user2_key, user2_val, scheme_cls=UserSchema)
+        self.blackboard.set(user2_key, user2_val)
         self.blackboard.register_callback(user2_key, self.callback_a)
         user2_val = self.blackboard.get(user2_key)
         user2_val.name = 'Bar'
@@ -159,7 +138,7 @@ class TestGblackboard(unittest.TestCase):
         # user list
         user_list_key = 'users'
         user_list_val = [user1_val, user2_val]
-        self.blackboard.set(user_list_key, user_list_val, scheme_cls=UserSchema)
+        self.blackboard.set(user_list_key, user_list_val)
         user_list_val = self.blackboard.get(user_list_key)
         self.assertEqual(user_list_val[0], user1_val)
         self.assertListEqual(user_list_val, [user1_val, user2_val])
