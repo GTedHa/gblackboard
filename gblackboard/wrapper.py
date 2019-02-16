@@ -2,6 +2,7 @@
 
 import abc
 import enum
+import pickle
 import redis
 # import socket
 
@@ -10,6 +11,7 @@ from .exception import *
 
 
 DEV_MODE = False
+GBLACKBOARD = 'gblackboard'
 
 
 class SupportedMemoryType(enum.Enum):
@@ -34,20 +36,12 @@ class MemoryWrapper(object):
 
     def __init__(self, **kwargs):
         self._mem = None
-        self._mem_ready = False
         self._config = kwargs
-
-    def setup(self):
-        self._mem_ready = self._set_memory()
-        return self._mem_ready
-
-    @property
-    def mem_ready(self):
-        return self._mem_ready
+        self.setup()
 
     @abc.abstractmethod
-    def _set_memory(self):
-        return True
+    def setup(self):
+        pass
 
     @abc.abstractmethod
     def close(self):
@@ -70,7 +64,21 @@ class MemoryWrapper(object):
         return None
 
     @abc.abstractmethod
-    def save(self):
+    def _get_all(self):
+        """
+        :return: Whole (serialized) data in blackboard
+        :rtype: dict
+        """
+        return dict()
+
+    @abc.abstractmethod
+    def _restore(self, kv_pairs):
+        """
+        :param kv_pairs: (serialized) key-value pairs
+        :type: dict
+        :return: True if succeed to store kv_pairs to memory else False
+        :rtype: bool
+        """
         return True
 
     @staticmethod
@@ -80,6 +88,20 @@ class MemoryWrapper(object):
     @staticmethod
     def transform_pickle_to_value(data):
         return load(data)
+
+    def save(self, file_path):
+        whole_data = self._get_all()
+        with open(file_path, 'wb') as outfile:
+            pickle.dump(whole_data, outfile, protocol=pickle.HIGHEST_PROTOCOL)
+        return True
+
+    def load(self, file_path):
+        with open(file_path, 'rb') as infile:
+            read_data = pickle.load(infile)
+        if type(read_data) is not dict:
+            raise ReadWrongFile("File contents must be dictionary data: {}".format(read_data))
+        self._restore(read_data)
+        return True
 
 
 class Dictionary(object):
@@ -112,6 +134,13 @@ class Dictionary(object):
     def exists(self, key):
         return key in self._dict
 
+    def flush(self):
+        self._dict.clear()
+
+    @property
+    def all(self):
+        return self._dict
+
 
 class DictionaryWrapper(MemoryWrapper):
 
@@ -120,14 +149,10 @@ class DictionaryWrapper(MemoryWrapper):
     """
 
     def setup(self):
-        return super(DictionaryWrapper, self).setup()
-
-    def _set_memory(self):
         self._mem = Dictionary()
-        return True
 
     def close(self):
-        self._mem = None
+        self._mem.flush()
 
     def set(self, key, value):
         data = MemoryWrapper.transform_value_to_pickle(value)
@@ -152,9 +177,36 @@ class DictionaryWrapper(MemoryWrapper):
     def has(self, key):
         return self._mem.exists(key)
 
-    def save(self):
-        # TODO: save dictionary contents as a json file.
+    def _get_all(self):
+        """
+        :return: Whole (serialized) data in blackboard
+        :rtype: dict
+        """
+        return self._mem.all
+
+    def _restore(self, kv_pairs):
+        """
+        :param kv_pairs: (serialized) key-value pairs
+        :type: dict
+        :return: True if succeed to store kv_pairs to memory else False
+        :rtype: bool
+        """
+        self._mem.flush()
+        for key, val in kv_pairs.items():
+            if type(key) is bytes:
+                key = key.decode("utf-8")
+            self._mem.set(key, val)
         return True
+
+
+def raise_conn_error(func):
+    def wrapper(*args, **kwargs):
+        try:
+            result = func(*args, **kwargs)
+        except redis.ConnectionError:
+            raise RedisNotConnected
+        return result
+    return wrapper
 
 
 class RedisWrapper(MemoryWrapper):
@@ -180,17 +232,14 @@ class RedisWrapper(MemoryWrapper):
     """
 
     def __init__(self, host='localhost', port=6379, db_num=0, flush=True, timeout=1.0, **kwargs):
-        super(RedisWrapper, self).__init__(**kwargs)
         self._host = host
         self._port = port
         self._db_num = db_num
         self._flush = flush
         self._timeout = timeout
+        super(RedisWrapper, self).__init__(**kwargs)
 
     def setup(self):
-        return super(RedisWrapper, self).setup()
-
-    def _set_memory(self):
         if DEV_MODE:
             import fakeredis
             self._mem = fakeredis.FakeStrictRedis()
@@ -199,10 +248,6 @@ class RedisWrapper(MemoryWrapper):
                 host=self._host, port=self._port, db=self._db_num,
                 socket_timeout=self._timeout, **self._config)
         self._validate_config()
-        connected = self.connected()
-        if not connected:
-            self._mem = None
-        return connected
 
     def _validate_config(self):
         # TODO: check that followings have valid values
@@ -226,63 +271,67 @@ class RedisWrapper(MemoryWrapper):
         else:
             return True
 
+    def _flush_hash(self):
+        keys = self._mem.hkeys(GBLACKBOARD)
+        if keys:
+            self._mem.hdel(GBLACKBOARD, *keys)
+
+    @raise_conn_error
     def close(self):
-        if self.connected() and self._flush:
-            self._mem.flushdb()
+        if self._flush:
+            self._flush_hash()
 
+    @raise_conn_error
     def set(self, key, value):
-        if self._mem_ready:
-            data = MemoryWrapper.transform_value_to_pickle(value)
-            try:
-                success = self._mem.set(key, data)
-            except redis.ConnectionError:
-                raise RedisNotConnected
-        else:
-            raise RedisNotConnected
-        return success
-
-    def get(self, key):
-        if self._mem_ready:
-            try:
-                data = self._mem.get(key)
-            except redis.ConnectionError:
-                raise RedisNotConnected
-            if data:
-                value = MemoryWrapper.transform_pickle_to_value(data)
-            else:
-                value = None
-        else:
-            raise RedisNotConnected
-        return value
-
-    def delete(self, key):
-        if self._mem_ready:
-            try:
-                result = self._mem.delete(key)
-            except redis.ConnectionError:
-                raise RedisNotConnected
-            if result > 0:
-                success = True
-            else:
-                success = False
-        else:
-            raise RedisNotConnected
-        return success
-
-    def has(self, key):
-        if self._mem_ready:
-            try:
-                result = self._mem.exists(key)
-            except redis.ConnectionError:
-                raise RedisNotConnected
-            if result > 0:
-                existing = True
-            else:
-                existing = False
-        else:
-            raise RedisNotConnected
-        return existing
-
-    def save(self):
-        # TODO: call redis.save()
+        data = MemoryWrapper.transform_value_to_pickle(value)
+        try:
+            self._mem.hset(GBLACKBOARD, key, data)
+        except redis.exceptions.DataError:
+            return False
         return True
+
+    @raise_conn_error
+    def get(self, key):
+        data = self._mem.hget(GBLACKBOARD, key)
+        if data:
+            return MemoryWrapper.transform_pickle_to_value(data)
+        else:
+            return None
+
+    @raise_conn_error
+    def delete(self, key):
+        result = self._mem.hdel(GBLACKBOARD, key)
+        if result > 0:
+            return True
+        else:
+            return False
+
+    @raise_conn_error
+    def has(self, key):
+        result = self._mem.hexists(GBLACKBOARD, key)
+        if result > 0:
+            return True
+        else:
+            return False
+
+    @raise_conn_error
+    def _get_all(self):
+        """
+        :return: Whole (serialized) data in blackboard
+        :rtype: dict
+        """
+        return self._mem.hgetall(GBLACKBOARD)
+
+    @raise_conn_error
+    def _restore(self, kv_pairs):
+        """
+        :param kv_pairs: (serialized) key-value pairs
+        :type: dict
+        :return: True if succeed to store kv_pairs to memory else False
+        :rtype: bool
+        """
+        self._flush_hash()
+        for key, val in kv_pairs.items():
+            self._mem.hset(GBLACKBOARD, key, val)
+        return True
+

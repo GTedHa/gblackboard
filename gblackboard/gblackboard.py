@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+import json
+import os
+
 from .wrapper import SupportedMemoryType
 from .wrapper import DictionaryWrapper, RedisWrapper
 from .exception import (
@@ -8,7 +11,9 @@ from .exception import (
     UnsupportedMemoryType,
     NotCallable,
     NotEditable,
-    NonExistingKey
+    NonExistingKey,
+    NonExistingDirectory,
+    UnsafeLoading
 )
 
 
@@ -112,9 +117,6 @@ class Blackboard(object):
             )
         self._meta_info = {}
 
-    def setup(self):
-        return self._memory_wrapper.setup()
-
     def close(self):
         del self._meta_info
         self._memory_wrapper.close()
@@ -194,6 +196,44 @@ class Blackboard(object):
             raise NonExistingKey
         meta_info = self._meta_info[key]
         meta_info.clear_callbacks()
+
+    def save(self, dir_path='./.gblackboard'):
+        if not os.path.exists(dir_path):
+            os.mkdir(dir_path, 0o755)
+        blackboard_file_path = os.path.join(dir_path, '.gblackboard.pickle')
+        meta_info_file_path = os.path.join(dir_path, '.gblackboard.meta')
+        self._memory_wrapper.save(blackboard_file_path)
+        self._save_meta_info(meta_info_file_path)
+
+    def load(self, dir_path='./.gblackboard', safe=True):
+        if self.keys(in_list=True):
+            if safe:
+                raise UnsafeLoading
+            else:
+                self.clear()
+        if os.path.exists(dir_path):
+            blackboard_file_path = os.path.join(dir_path, '.gblackboard.pickle')
+            meta_info_file_path = os.path.join(dir_path, '.gblackboard.meta')
+            self._memory_wrapper.load(blackboard_file_path)
+            self._load_meta_info(meta_info_file_path)
+        else:
+            raise NonExistingDirectory
+
+    def _save_meta_info(self, file_path):
+        saved_meta_info = {}
+        for key, meta_info in self._meta_info.items():
+            read_only = meta_info.read_only
+            saved_meta_info[key] = read_only
+        with open(file_path, 'w') as outfile:
+            json.dump(saved_meta_info, outfile)
+
+    def _load_meta_info(self, file_path):
+        with open(file_path, 'r') as infile:
+            saved_meta_info = json.load(infile)
+        if self._meta_info:
+            self._meta_info.clear()
+        for key, read_only in saved_meta_info.items():
+            self._meta_info[key] = MetaInfo(read_only=read_only)
 
     def print_blackboard(self):
         """

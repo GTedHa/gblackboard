@@ -32,7 +32,6 @@ class TestGblackboard(unittest.TestCase):
 
     def setUp(self):
         self.blackboard = Blackboard(SupportedMemoryType.DICTIONARY)
-        self.blackboard.setup()
         self.data_a = None
         self.data_b = None
         self.data_c = None
