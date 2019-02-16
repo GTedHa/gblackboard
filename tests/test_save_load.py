@@ -3,9 +3,11 @@
 """Tests for `gblackboard` package."""
 
 import unittest
+import os
 
+from gblackboard import exception
 from gblackboard.wrapper import RedisWrapper, DictionaryWrapper
-from gblackboard import Blackboard
+from gblackboard import Blackboard, SupportedMemoryType
 
 from gblackboard import wrapper
 wrapper.DEV_MODE = True
@@ -188,6 +190,55 @@ class TestSaveLoad(unittest.TestCase):
         )
         self.assertNotEqual(wrapper.get('user_info'), other_user)
         wrapper.close()
+
+    def test_save_load_on_blackboard(self):
+        blackboard = Blackboard(SupportedMemoryType.DICTIONARY)
+        blackboard.set('hello', 'world', read_only=True)
+        blackboard.save()
+        blackboard.close()
+        blackboard = Blackboard(SupportedMemoryType.DICTIONARY)
+        blackboard.load()
+        self.assertEqual(blackboard.get('hello'), 'world')
+        with self.assertRaises(exception.NotEditable):
+            blackboard.update('hello', 'G.Ted')
+        with self.assertRaises(exception.UnsafeLoading):
+            blackboard.load()
+        druru = User(
+            name='Druru',
+            skills=['C++ 11', 'Git', 'Docker', 'Unreal Engine'],
+            age=27.9,
+            address=Address(
+                country='S. Korea',
+                city='Incheon'
+            )
+        )
+        blackboard.set('user', druru, read_only=False)
+        gted = User(
+            name='G.Ted',
+            skills=['Python (2 & 3)', 'Git', 'Docker', 'ROS'],
+            age=20.5,
+            address=Address(
+                country='S. Korea',
+                city='Seoul'
+            )
+        )
+        blackboard.update('user', gted)
+        blackboard.save()
+        blackboard.close()
+        blackboard = Blackboard(SupportedMemoryType.REDIS)
+        blackboard.load()
+        self.assertEqual(blackboard.get('hello'), 'world')
+        self.assertEqual(blackboard.get('user'), gted)
+        blackboard.close()
+        # remove saved gblackboard directory and files
+        gblackboard_path = './.gblackboard'
+        if os.path.exists(gblackboard_path):
+            for root, dirs, files in os.walk(gblackboard_path, topdown=False):
+                for name in files:
+                    os.remove(os.path.join(root, name))
+                for name in dirs:
+                    os.rmdir(os.path.join(root, name))
+                os.rmdir(root)
 
 
 if __name__ == '__main__':
