@@ -14,7 +14,6 @@ with open('HISTORY.rst') as history_file:
 requirements = [
     'Click>=6.0',
     'redis>=3.0.0',
-    'marshmallow==2.18.0',
 ]
 
 setup_requirements = [ ]
@@ -53,6 +52,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/GTedHa/gblackboard',
-    version='0.1.1',
+    version='0.2.0',
     zip_safe=False,
 )
