@@ -65,3 +65,11 @@ class FileIOException(BlackboardException):
 
 class ReadWrongFile(FileIOException):
     pass
+
+
+class NonExistingDirectory(FileIOException):
+    pass
+
+
+class UnsafeLoading(FileIOException):
+    pass
