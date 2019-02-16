@@ -13,7 +13,7 @@ from gblackboard import wrapper
 wrapper.DEV_MODE = True
 
 
-FILE_PATH = '/home/gted/gblackboard.pickle'
+FILE_PATH = './gblackboard.pickle'
 
 
 class Address:
