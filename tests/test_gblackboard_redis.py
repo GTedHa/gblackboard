@@ -5,8 +5,10 @@
 
 import datetime as dt
 import unittest
+from unittest.mock import patch
 
-from gblackboard import wrapper
+import fakeredis
+
 from gblackboard import exception
 from gblackboard import Blackboard
 from gblackboard import SupportedMemoryType
@@ -31,8 +33,8 @@ class User(object):
 
 class TestGblackboard(unittest.TestCase):
 
+    @patch('redis.Redis', fakeredis.FakeRedis)
     def setUp(self):
-        wrapper.DEV_MODE = True
         self.blackboard = Blackboard(
             SupportedMemoryType.REDIS,
             host='localhost',

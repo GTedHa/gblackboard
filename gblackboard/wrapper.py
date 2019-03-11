@@ -4,13 +4,10 @@ import abc
 import enum
 import pickle
 import redis
-# import socket
 
 from .data import reconstruct, load
 from .exception import *
 
-
-DEV_MODE = False
 GBLACKBOARD = 'gblackboard'
 
 
@@ -240,13 +237,9 @@ class RedisWrapper(MemoryWrapper):
         super(RedisWrapper, self).__init__(**kwargs)
 
     def setup(self):
-        if DEV_MODE:
-            import fakeredis
-            self._mem = fakeredis.FakeStrictRedis()
-        else:
-            self._mem = redis.Redis(
-                host=self._host, port=self._port, db=self._db_num,
-                socket_timeout=self._timeout, **self._config)
+        self._mem = redis.Redis(
+            host=self._host, port=self._port, db=self._db_num,
+            socket_timeout=self._timeout, **self._config)
         self._validate_config()
 
     def _validate_config(self):
