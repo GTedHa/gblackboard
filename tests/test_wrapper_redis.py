@@ -3,16 +3,18 @@
 """Tests for `gblackboard` package."""
 
 import unittest
+from unittest.mock import patch
 
-from gblackboard import wrapper
+import fakeredis
+
 from gblackboard.wrapper import RedisWrapper
 
 
 class TestRedisWrapper(unittest.TestCase):
     """Tests for `gblackboard` package."""
 
+    @patch('redis.Redis', fakeredis.FakeRedis)
     def setUp(self):
-        wrapper.DEV_MODE = True
         self.redis_wrapper = RedisWrapper(host='localhost', flush=True)
 
     def tearDown(self):
