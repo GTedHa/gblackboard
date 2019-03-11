@@ -4,14 +4,13 @@
 
 import unittest
 import os
+from unittest.mock import patch
+
+import fakeredis
 
 from gblackboard import exception
 from gblackboard.wrapper import RedisWrapper, DictionaryWrapper
 from gblackboard import Blackboard, SupportedMemoryType
-
-from gblackboard import wrapper
-wrapper.DEV_MODE = True
-
 
 FILE_PATH = './gblackboard.pickle'
 
@@ -113,6 +112,7 @@ class TestSaveLoad(unittest.TestCase):
         self.assertNotEqual(wrapper.get('user_info'), other_user)
         wrapper.close()
 
+    @patch('redis.Redis', fakeredis.FakeRedis)
     def test_redis_wrapper(self):
         wrapper = RedisWrapper(host='localhost', flush=True)
         self.__make_dummy_data(wrapper)
@@ -139,6 +139,7 @@ class TestSaveLoad(unittest.TestCase):
         self.assertNotEqual(wrapper.get('user_info'), other_user)
         wrapper.close()
 
+    @patch('redis.Redis', fakeredis.FakeRedis)
     def test_redis_save_dict_read(self):
         wrapper = RedisWrapper(host='localhost', flush=True)
         self.__make_dummy_data(wrapper)
@@ -165,6 +166,7 @@ class TestSaveLoad(unittest.TestCase):
         self.assertNotEqual(wrapper.get('user_info'), other_user)
         wrapper.close()
 
+    @patch('redis.Redis', fakeredis.FakeRedis)
     def test_dict_save_redis_read(self):
         wrapper = DictionaryWrapper()
         self.__make_dummy_data(wrapper)
@@ -191,6 +193,7 @@ class TestSaveLoad(unittest.TestCase):
         self.assertNotEqual(wrapper.get('user_info'), other_user)
         wrapper.close()
 
+    @patch('redis.Redis', fakeredis.FakeRedis)
     def test_save_load_on_blackboard(self):
         blackboard = Blackboard(SupportedMemoryType.DICTIONARY)
         blackboard.set('hello', 'world', read_only=True)
